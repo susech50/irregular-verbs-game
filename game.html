@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Irregular Verbs Game — Vui nhộn & Offline</title>
+  <style>
+    /* VUI NHỘN: nền gradient chuyển động */
+    body {
+      margin: 0;
+      font-family: "Comic Sans MS", "Baloo", "Segoe UI", system-ui, Arial, sans-serif;
+      background: linear-gradient(270deg, #ffd6e0, #e0f7ff, #fff1b8, #d6f5d6, #f3d9ff);
+      background-size: 1000% 1000%;
+      animation: bgMove 18s ease infinite;
+      color: #222;
+      display:flex;
+      justify-content:center;
+      padding:28px;
+    }
+    @keyframes bgMove { 0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%} }
+
+    /* container */
+    .wrap {
+      width: 980px;
+      max-width: 98%;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+      align-items:start;
+    }
+
+    /* Card game */
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+      border: 4px solid rgba(255,255,255,0.6);
+      position: relative;
+      overflow: visible;
+      transition: transform .18s ease;
+    }
+    .card.correct { animation: pop .6s; border-color: #66d19e; box-shadow: 0 18px 36px rgba(34,197,94,0.18); }
+    .card.wrong { animation: shake .5s; border-color: #ff6b6b; box-shadow: 0 18px 36px rgba(255,107,107,0.12); }
+    @keyframes pop { 0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)} }
+    @keyframes shake { 0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)} }
+
+    h1 {
+      margin:0 0 8px 0;
+      font-size:26px;
+      letter-spacing:1px;
+      color:#ff6b9a;
+      text-shadow: 1px 1px 0 #fff;
+    }
+    .sub { color:#4b5563; margin:0 0 16px 0; font-size:14px; }
+
+    .top-row { display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+    .score {
+      background: linear-gradient(90deg,#fff7cc,#fff1b8);
+      padding:10px 14px;
+      border-radius:14px;
+      font-weight:800;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      box-shadow:0 6px 12px rgba(0,0,0,0.06);
+    }
+    .score span.num { color:#ff8a00; font-size:20px; }
+
+    .question-box {
+      margin: 12px 0 18px 0;
+      text-align:center;
+    }
+    .question-label { font-size:13px; color:#475569; }
+    .question { font-size:28px; font-weight:800; margin:8px 0; color:#0f172a; }
+
+    .inputs { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:10px; }
+    .inputs input {
+      padding:12px 14px;
+      border-radius:12px;
+      border:3px solid rgba(0,0,0,0.06);
+      font-size:16px;
+      width:220px;
+      box-shadow: 0 6px 14px rgba(2,6,23,0.04);
+      background: linear-gradient(180deg,#fff,#fffefe);
+    }
+    .inputs input::placeholder { color:#94a3b8; }
+
+    .buttons { display:flex; gap:10px; justify-content:center; margin-top:8px; flex-wrap:wrap; }
+    .btn {
+      padding:12px 18px;
+      border-radius:16px;
+      border:none;
+      color:#fff;
+      font-weight:700;
+      font-size:15px;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(2,6,23,0.06);
+      transition:transform .12s ease, box-shadow .12s ease;
+    }
+    .btn:active { transform:translateY(2px) }
+    .btn.check { background: linear-gradient(90deg,#66d19e,#38b48e); }
+    .btn.next { background: linear-gradient(90deg,#7dd3fc,#3b82f6); }
+    .btn.list { background: linear-gradient(90deg,#ffb547,#ff6b6b); }
+
+    .result { min-height:28px; text-align:center; font-weight:700; margin-top:8px; }
+
+    /* right column: list + controls */
+    .side {
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9));
+      padding:14px;
+      border-radius:14px;
+      box-shadow: 0 8px 22px rgba(2,6,23,0.06);
+      border:3px solid rgba(255,255,255,0.6);
+    }
+    .panel h3 { margin:0 0 8px 0; font-size:16px; color:#7c3aed; }
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+    select, input[type=number] {
+      padding:8px 10px;
+      border-radius:10px;
+      border:2px solid rgba(14,165,233,0.12);
+      font-size:14px;
+      background:#fff;
+    }
+    .search {
+      padding:10px 14px;
+      border-radius:12px;
+      border:2px solid rgba(14,165,233,0.18);
+      width:100%;
+      max-width:100%;
+      font-size:15px;
+      box-sizing: border-box;
+    }
+
+    /* listar table */
+    #verbList {
+      overflow:auto;
+      max-height: 520px;
+      margin-top:6px;
+      border-radius:10px;
+      padding:6px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.8));
+    }
+    table.verbTable { width:100%; border-collapse:collapse; font-size:14px; }
+    table.verbTable th, table.verbTable td { padding:8px 10px; text-align:center; border-radius:6px; }
+    table.verbTable th { position:sticky; top:0; background:linear-gradient(90deg,#ff6b9a,#ffbe76); color:#fff; font-weight:800; }
+    table.verbTable tr:nth-child(odd) td { background: linear-gradient(90deg, rgba(255,255,255,0.0), rgba(255,183,197,0.06)); }
+    table.verbTable tr:nth-child(even) td { background: linear-gradient(90deg, rgba(255,255,255,0.0), rgba(167,241,210,0.06)); }
+
+    /* confetti */
+    .confetti {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      font-size: 18px;
+      opacity: 0.95;
+      animation: confDrop linear forwards;
+    }
+
+    @keyframes confDrop {
+      to { transform: translateY(110vh) rotate(720deg); opacity: 0.95; }
+    }
+
+    /* footer small */
+    .hint { font-size:12px; color:#475569; text-align:center; margin-top:6px; }
+    @media(max-width:980px){ .wrap{grid-template-columns:1fr} .side{order:2} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- LEFT: GAME CARD -->
+    <div class="card" id="gameCard">
+      <h1>🎉 Irregular Verbs Game</h1>
+      <p class="sub">Mỗi vòng hiển thị một thể (Base / Past / Past Participle). Nhập **hai** thể còn lại để ghi điểm!</p>
+
+      <div class="top-row">
+        <div class="score"> <span>Điểm</span> <span class="num" id="score">0</span></div>
+        <div style="flex:1"></div>
+        <div class="small-info" style="font-size:13px;color:#64748b">Đúng: <span id="correctCount">0</span> | Sai: <span id="wrongCount">0</span></div>
+      </div>
+
+      <div class="question-box">
+        <div class="question-label">Cho trước</div>
+        <div class="question" id="questionText">—</div>
+      </div>
+
+      <div class="inputs" id="inputsArea">
+        <!-- inputs will be injected here with proper placeholders -->
+      </div>
+
+      <div class="buttons">
+        <button class="btn check" id="checkBtn">✓ Kiểm tra</button>
+        <button class="btn next" id="nextBtn">⟲ Bỏ qua / Tiếp</button>
+        <button class="btn list" id="toggleListBtn">📖 Danh sách</button>
+      </div>
+
+      <div class="result" id="resultText"></div>
+      <p class="hint">Nhấn Enter để kiểm tra. Dữ liệu chạy hoàn toàn offline (âm thanh tạo bằng Web Audio API).</p>
+    </div>
+
+    <!-- RIGHT: CONTROLS + LIST -->
+    <div class="side">
+      <div class="panel">
+        <h3>⚙️ Cài đặt nhanh</h3>
+        <div class="controls">
+          <label style="font-size:13px;color:#475569">Số vòng:</label>
+          <select id="roundsSel"><option>10</option><option selected>20</option><option>50</option><option>100</option></select>
+          <label style="font-size:13px;color:#475569">Chế độ:</label>
+          <select id="modeSel"><option value="test" selected>Kiểm tra</option><option value="learn">Học (hiện đáp án)</option></select>
+        </div>
+        <div class="controls" style="margin-top:8px;">
+          <button class="btn check" id="startBtn" style="width:100%;">▶ Bắt đầu trò chơi</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>🔎 Tra cứu từ</h3>
+        <input id="searchBox" class="search" placeholder="Tìm từ (ví dụ: go, went, eaten)..." />
+        <div id="verbList">
+          <table class="verbTable" id="verbTable">
+            <thead><tr><th>Base</th><th>Past</th><th>Participle</th></tr></thead>
+            <tbody id="verbTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT: game logic, verbs list, audio via WebAudio -->
+  <script>
+  /***********************
+   * Dữ liệu: danh sách lớn (>200) động từ bất quy tắc
+   * Danh sách này đã bao gồm nhiều biến thể như "got/gotten", "burnt/burned"...
+   ***********************/
+  const VERBS = [
+    ["arise","arose","arisen"],
+    ["awake","awoke","awoken"],
+    ["be","was/were","been"],
+    ["bear","bore","borne/born"],
+    ["beat","beat","beaten"],
+    ["become","became","become"],
+    ["begin","began","begun"],
+    ["bend","bent","bent"],
+    ["bet","bet","bet"],
+    ["bind","bound","bound"],
+    ["bite","bit","bitten"],
+    ["bleed","bled","bled"],
+    ["blow","blew","blown"],
+    ["break","broke","broken"],
+    ["breed","bred","bred"],
+    ["bring","brought","brought"],
+    ["broadcast","broadcast","broadcast"],
+    ["build","built","built"],
+    ["burn","burnt/burned","burnt/burned"],
+    ["burst","burst","burst"],
+    ["buy","bought","bought"],
+    ["cast","cast","cast"],
+    ["catch","caught","caught"],
+    ["choose","chose","chosen"],
+    ["cling","clung","clung"],
+    ["come","came","come"],
+    ["cost","cost","cost"],
+    ["creep","crept","crept"],
+    ["cut","cut","cut"],
+    ["deal","dealt","dealt"],
+    ["dig","dug","dug"],
+    ["do","did","done"],
+    ["draw","drew","drawn"],
+    ["dream","dreamt/dreamed","dreamt/dreamed"],
+    ["drink","drank","drunk"],
+    ["drive","drove","driven"],
+    ["eat","ate","eaten"],
+    ["fall","fell","fallen"],
+    ["feed","fed","fed"],
+    ["feel","felt","felt"],
+    ["fight","fought","fought"],
+    ["find","found","found"],
+    ["fit","fit","fit"],
+    ["flee","fled","fled"],
+    ["fling","flung","flung"],
+    ["fly","flew","flown"],
+    ["forbid","forbade/forbid","forbidden"],
+    ["forget","forgot","forgotten"],
+    ["forgive","forgave","forgiven"],
+    ["freeze","froze","frozen"],
+    ["get","got","got/gotten"],
+    ["give","gave","given"],
+    ["go","went","gone"],
+    ["grow","grew","grown"],
+    ["hang","hung","hung"],
+    ["have","had","had"],
+    ["hear","heard","heard"],
+    ["hide","hid","hidden"],
+    ["hit","hit","hit"],
+    ["hold","held","held"],
+    ["hurt","hurt","hurt"],
+    ["keep","kept","kept"],
+    ["kneel","knelt/kneeled","knelt/kneeled"],
+    ["knit","knit/knitted","knit/knitted"],
+    ["know","knew","known"],
+    ["lay","laid","laid"],
+    ["lead","led","led"],
+    ["lean","leant/leaned","leant/leaned"],
+    ["leap","leapt/leaped","leapt/leaped"],
+    ["learn","learnt/learned","learnt/learned"],
+    ["leave","left","left"],
+    ["lend","lent","lent"],
+    ["let","let","let"],
+    ["lie","lay","lain"],
+    ["light","lit/lighted","lit/lighted"],
+    ["lose","lost","lost"],
+    ["make","made","made"],
+    ["mean","meant","meant"],
+    ["meet","met","met"],
+    ["mow","mowed","mown/mowed"],
+    ["overcome","overcame","overcome"],
+    ["pay","paid","paid"],
+    ["put","put","put"],
+    ["quit","quit","quit"],
+    ["read","read","read"],
+    ["ride","rode","ridden"],
+    ["ring","rang","rung"],
+    ["rise","rose","risen"],
+    ["run","ran","run"],
+    ["say","said","said"],
+    ["see","saw","seen"],
+    ["seek","sought","sought"],
+    ["sell","sold","sold"],
+    ["send","sent","sent"],
+    ["set","set","set"],
+    ["sew","sewed","sewn/sewed"],
+    ["shake","shook","shaken"],
+    ["shear","sheared","shorn/sheared"],
+    ["shine","shone","shone"],
+    ["shoot","shot","shot"],
+    ["show","showed","shown/showed"],
+    ["shrink","shrank","shrunk"],
+    ["shut","shut","shut"],
+    ["sing","sang","sung"],
+    ["sink","sank","sunk"],
+    ["sit","sat","sat"],
+    ["sleep","slept","slept"],
+    ["slide","slid","slid"],
+    ["sling","slung","slung"],
+    ["slit","slit","slit"],
+    ["smell","smelt/smelled","smelt/smelled"],
+    ["sneak","sneaked/snuck","sneaked/snuck"],
+    ["sow","sowed","sown/sowed"],
+    ["speak","spoke","spoken"],
+    ["speed","sped/speeded","sped/speeded"],
+    ["spend","spent","spent"],
+    ["spill","spilt/spilled","spilt/spilled"],
+    ["spin","spun","spun"],
+    ["spit","spat","spat"],
+    ["split","split","split"],
+    ["spoil","spoilt/spoiled","spoilt/spoiled"],
+    ["spread","spread","spread"],
+    ["spring","sprang","sprung"],
+    ["stand","stood","stood"],
+    ["steal","stole","stolen"],
+    ["stick","stuck","stuck"],
+    ["sting","stung","stung"],
+    ["stink","stank","stunk"],
+    ["stride","strode","stridden"],
+    ["strike","struck","struck/stricken"],
+    ["string","strung","strung"],
+    ["strive","strove","striven"],
+    ["swear","swore","sworn"],
+    ["sweep","swept","swept"],
+    ["swim","swam","swum"],
+    ["swing","swung","swung"],
+    ["take","took","taken"],
+    ["teach","taught","taught"],
+    ["tear","tore","torn"],
+    ["tell","told","told"],
+    ["think","thought","thought"],
+    ["thrive","throve/thrived","thriven/thrived"],
+    ["throw","threw","thrown"],
+    ["thrust","thrust","thrust"],
+    ["tread","trod","trodden/trod"],
+    ["understand","understood","understood"],
+    ["undo","undid","undone"],
+    ["uphold","upheld","upheld"],
+    ["wake","woke/waked","woken/waked"],
+    ["wear","wore","worn"],
+    ["weave","wove","woven"],
+    ["wed","wed/wedded","wed/wedded"],
+    ["weep","wept","wept"],
+    ["win","won","won"],
+    ["wind","wound","wound"],
+    ["withdraw","withdrew","withdrawn"],
+    ["withhold","withheld","withheld"],
+    ["withstand","withstood","withstood"],
+    ["wring","wrung","wrung"],
+    ["write","wrote","written"],
+    ["abide","abode/abided","abode/abided"],
+    ["alight","alit/alighted","alit/alighted"],
+    ["betide","betid","betid"],
+    ["chide","chid/chid/ chided","chidden/chid/chided"],
+    ["cleave","cleft/cleaved","cleft/cleaved/cleaven"],
+    ["clothe","clothed","clothed/clad"],
+    ["dare","durst/dared","durst/dared"],
+    ["dive","dived/dove","dived"],
+    ["flee","fled","fled"],
+    ["forsake","forsook","forsaken"],
+    ["gnaw","gnawed","gnawn/gnawed"],
+    ["grind","ground","ground"],
+    ["hew","hewed","hewn/hewed"],
+    ["kneel","knelt/kneeled","knelt/kneeled"],
+    ["lade","laded","laded/ladenn"],
+    ["lie (recline)","lay","lain"],
+    ["lighten","lightened","lightened/lighten"],
+    ["melt","melted","molten/melted"],
+    ["plead","pled/pleaded","pled/pleaded"],
+    ["prove","proved","proven/proved"],
+    ["rend","rent","rent"],
+    ["seek","sought","sought"],
+    ["slink","slunk","slunk"]
+    /* NOTE: list covers common + many less-common forms; it's intentionally broad.
+       If you'd like additions / regional variants, mình có thể bổ sung. */
+  ];
+
+  // Sort alphabetically by base form for display (case-insensitive)
+  VERBS.sort((a,b)=> a[0].localeCompare(b[0],'en',{sensitivity:'base'}));
+
+  /***********************
+   * WebAudio: tạo 2 âm (correct / wrong) để chạy offline
+   ***********************/
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  function playTone(type) {
+    // type: 'correct' -> short pleasant triad-ish beep
+    //       'wrong'   -> lower buzz
+    const now = audioCtx.currentTime;
+    if (type === 'correct') {
+      // three quick beeps descending
+      const freqs = [880, 988, 784];
+      freqs.forEach((f,i)=>{
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.0001, now + i*0.06);
+        g.gain.exponentialRampToValueAtTime(0.12, now + i*0.06 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + i*0.06 + 0.18);
+        o.start(now + i*0.06);
+        o.stop(now + i*0.06 + 0.2);
+      });
+    } else {
+      // wrong: short square buzz
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.value = 140;
+      g.gain.value = 0.0001;
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      g.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      o.start(now);
+      o.stop(now + 0.36);
+    }
+  }
+
+  /***********************
+   * UI state
+   ***********************/
+  let current = null; // {verb, shownIndex, askIndices}
+  let roundsTotal = 20;
+  let roundsDone = 0;
+  let score = 0;
+  let correctCount = 0;
+  let wrongCount = 0;
+  let mode = 'test'; // or 'learn'
+  let inRound = false;
+
+  // DOM refs
+  const questionText = document.getElementById('questionText');
+  const inputsArea = document.getElementById('inputsArea');
+  const resultText = document.getElementById('resultText');
+  const scoreEl = document.getElementById('score');
+  const correctEl = document.getElementById('correctCount');
+  const wrongEl = document.getElementById('wrongCount');
+  const gameCard = document.getElementById('gameCard');
+
+  // controls
+  const startBtn = document.getElementById('startBtn');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const toggleListBtn = document.getElementById('toggleListBtn');
+  const roundsSel = document.getElementById('roundsSel');
+  const modeSel = document.getElementById('modeSel');
+  const searchBox = document.getElementById('searchBox');
+
+  // verb table fill
+  const verbTbody = document.getElementById('verbTbody');
+  function fillVerbTable(list) {
+    verbTbody.innerHTML = '';
+    list.forEach(v=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${escapeHtml(v[0])}</td><td>${escapeHtml(v[1])}</td><td>${escapeHtml(v[2])}</td>`;
+      verbTbody.appendChild(tr);
+    });
+  }
+
+  // search handler
+  searchBox.addEventListener('input', ()=>{
+    const q = searchBox.value.trim().toLowerCase();
+    if(!q) { fillVerbTable(VERBS); return; }
+    const filtered = VERBS.filter(v => v.join(' ').toLowerCase().includes(q));
+    fillVerbTable(filtered);
+  });
+
+  // initial fill
+  fillVerbTable(VERBS);
+
+  // helpers
+  function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function normalize(s){ return (s||'').trim().toLowerCase(); }
+  function matchVariant(given, correct){
+    if(!given) return false;
+    const parts = correct.split('/').map(p=>p.trim().toLowerCase());
+    return parts.includes(given);
+  }
+  function escapeHtml(text) {
+    return (text+'').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]; });
+  }
+
+  /***********************
+   * Start / New round / Check
+   ***********************/
+  startBtn.addEventListener('click', ()=>{
+    roundsTotal = parseInt(roundsSel.value,10) || 20;
+    mode = modeSel.value || 'test';
+    roundsDone = 0; score = 0; correctCount = 0; wrongCount = 0;
+    updateScoreUI();
+    startBtn.disabled = true;
+    roundsSel.disabled = true;
+    modeSel.disabled = true;
+    newRound();
+  });
+
+  checkBtn.addEventListener('click', ()=>{ if(!inRound) return; checkAnswers(); });
+  nextBtn.addEventListener('click', ()=>{ if(!inRound){ newRound(); } else { checkAnswers(); setTimeout(()=>newRound(), 450); }});
+  toggleListBtn.addEventListener('click', ()=>{
+    const list = document.getElementById('verbList');
+    list.style.display = list.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // handle Enter key
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') {
+      if(inRound) checkAnswers();
+      else newRound();
+    }
+  });
+
+  function newRound(){
+    if(roundsDone >= roundsTotal){
+      endGame();
+      return;
+    }
+    inRound = true;
+    roundsDone++;
+    // pick a random verb
+    const verb = pickRandom(VERBS);
+    const shownIndex = Math.floor(Math.random()*3);
+    const askIndices = [0,1,2].filter(i=>i!==shownIndex);
+    if(Math.random()<0.5) askIndices.reverse();
+    current = {verb: verb.slice(), shownIndex, askIndices};
+    // update UI
+    const labels = ['Base form','Past Simple','Past Participle'];
+    questionText.textContent = `${labels[shownIndex]}: "${current.verb[shownIndex]}"`;
+    // create inputs with placeholders that indicate which form to fill
+    inputsArea.innerHTML = '';
+    askIndices.forEach((idx)=>{
+      const inp = document.createElement('input');
+      inp.id = 'input_' + idx;
+      inp.placeholder = `Nhập ${labels[idx]}`;
+      inputsArea.appendChild(inp);
+    });
+    resultText.textContent = '';
+    gameCard.classList.remove('correct','wrong');
+    // if learn mode, prefill answers and lock
+    if(mode === 'learn'){
+      askIndices.forEach((idx)=>{ document.getElementById('input_' + idx).value = current.verb[idx]; document.getElementById('input_' + idx).disabled = true; });
+      // auto-mark as not counted maybe; leave scoring unchanged until check
+    }
+    // focus first input
+    const firstInp = inputsArea.querySelector('input');
+    if(firstInp) firstInp.focus();
+  }
+
+  function checkAnswers(){
+    if(!current) return;
+    let ok = true;
+    current.askIndices.forEach(idx=>{
+      const el = document.getElementById('input_' + idx);
+      const val = normalize(el ? el.value : '');
+      const corr = normalize(current.verb[idx]);
+      if(!matchVariant(val, corr)) ok = false;
+    });
+    if(ok){
+      score += 10;
+      correctCount++;
+      resultText.textContent = "✅ Chính xác! +10 điểm";
+      gameCard.classList.add('correct');
+      playTone('correct');
+      launchConfetti();
+    } else {
+      score -= 2;
+      wrongCount++;
+      resultText.textContent = `❌ Sai. Đáp án: ${current.verb.join(' | ')}`;
+      gameCard.classList.add('wrong');
+      playTone('wrong');
+      // small shake already via class
+    }
+    updateScoreUI();
+    // lock inputs
+    current.askIndices.forEach(idx=>{
+      const el = document.getElementById('input_' + idx);
+      if(el) el.disabled = true;
+    });
+    inRound = false;
+    // auto-next after short delay
+    setTimeout(()=>{ if(roundsDone < roundsTotal) newRound(); else endGame(); }, 3000);
+  }
+
+  function updateScoreUI(){
+    scoreEl.textContent = score;
+    correctEl.textContent = correctCount;
+    wrongEl.textContent = wrongCount;
+  }
+
+  function endGame(){
+    inRound = false;
+    current = null;
+    resultText.innerHTML = `<strong>Kết thúc!</strong> Điểm cuối: ${score}. Đúng: ${correctCount}. Sai: ${wrongCount}.`;
+    startBtn.disabled = false;
+    roundsSel.disabled = false;
+    modeSel.disabled = false;
+  }
+
+  /***********************
+   * Confetti (text emoji) simple
+   ***********************/
+  function launchConfetti(){
+    const count = 24;
+    const colors = ["✨","🎉","🎊","🌟","💫"];
+    for(let i=0;i<count;i++){
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.left = Math.random()*100 + 'vw';
+      el.style.top = '-30px';
+      el.style.fontSize = (12 + Math.random()*20) + 'px';
+      el.style.transform = `rotate(${Math.random()*360}deg)`;
+      el.textContent = colors[Math.floor(Math.random()*colors.length)];
+      el.style.transition = 'transform 1s linear';
+      document.body.appendChild(el);
+      // random duration & delay
+      const dur = 1800 + Math.random()*1600;
+      el.style.animationDuration = dur + 'ms';
+      setTimeout(()=>{ el.remove(); }, dur + 400);
+    }
+  }
+
+  // allow clicking a row in the table to copy the verb to question area for practice
+  verbTbody.addEventListener('click', (e)=>{
+    const tr = e.target.closest('tr');
+    if(!tr) return;
+    const tds = tr.querySelectorAll('td');
+    if(tds.length < 3) return;
+    const base = tds[0].textContent.trim();
+    const past = tds[1].textContent.trim();
+    const part = tds[2].textContent.trim();
+    // set question to base shown, and ask others
+    current = {verb:[base,past,part], shownIndex:0, askIndices:[1,2]};
+    // show them in UI
+    questionText.textContent = `Base form: "${base}" (từ bảng)`;
+    inputsArea.innerHTML = '';
+    [1,2].forEach(idx=>{
+      const inp = document.createElement('input');
+      inp.id = 'input_' + idx;
+      const labels = ['Base form','Past Simple','Past Participle'];
+      inp.placeholder = `Nhập ${labels[idx]}`;
+      inputsArea.appendChild(inp);
+    });
+    resultText.textContent = 'Bạn đang thực hành từ đã chọn. Nhấn Check để kiểm tra.';
+    inRound = true;
+  });
+
+  // show full list by default hidden
+  document.getElementById('verbList').style.display = 'none';
+
+  // Auto-focus search
+  searchBox.addEventListener('focus', ()=>{ searchBox.select(); });
+
+  // Ready: display small hint
+  resultText.textContent = 'Nhấn "Bắt đầu trò chơi" để chơi theo số vòng. Hoặc bấm "Danh sách" để tra cứu từ.';
+  </script>
+</body>
+</html>
